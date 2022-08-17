@@ -116,6 +116,16 @@ const assets = {
     }
 }
 
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, '\\$&');
+    var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, ' '));
+}
+
 // Game
 /**
  * The main controller for the entire Phaser game.
@@ -126,33 +136,46 @@ let game
 let operation
 let maxResultSize
 window.addEventListener("load", function() {
-    Swal.fire({
-        title: 'Asteroid Adventure',
-        text: 'Choose a facts category.',
-        input: 'select',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        inputOptions: {
-            '5': 'Facts to 5',
-            '10': 'Facts to 10',
-        }
-    }).then(function(result) {
-        let values = result.value;
-        maxResultSize = parseInt(values);
-        let suffix = ' (to ' + maxResultSize + ')';
-        Swal.fire({
+    var factsPromise;
+    var providedFacts = getParameterByName("factscategory");
+    if(providedFacts != null)
+        factsPromise = Promise.resolve({ value: providedFacts });
+    else
+        factsPromise = Swal.fire({
             title: 'Asteroid Adventure',
-            text: 'Choose a game mode.',
+            text: 'Choose a facts category.',
             input: 'select',
             allowOutsideClick: false,
             allowEscapeKey: false,
             inputOptions: {
-                'add': 'Addition' + suffix,
-                'subtract': 'Subtraction' + suffix,
-                'multiply': 'Multiplication' + suffix,
-                'divide': 'Division' + suffix,
+                '5': 'Facts to 5',
+                '10': 'Facts to 10',
             }
-        }).then(function(result) {
+        });
+    
+    factsPromise.then(function(result) {
+        let values = result.value;
+        maxResultSize = parseInt(values);
+        let suffix = ' (to ' + maxResultSize + ')';
+        var operationPromise;
+        var providedOperation = getParameterByName("operation");
+        if(providedOperation != null)
+            operationPromise = Promise.resolve({ value: providedOperation });
+        else
+            operationPromise = Swal.fire({
+                title: 'Asteroid Adventure',
+                text: 'Choose a game mode.',
+                input: 'select',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                inputOptions: {
+                    'add': 'Addition' + suffix,
+                    'subtract': 'Subtraction' + suffix,
+                    'multiply': 'Multiplication' + suffix,
+                    'divide': 'Division' + suffix,
+                }
+            });
+        operationPromise.then(function(result) {
             operation = result.value;
             window.generateMathQuestions(operation, maxResultSize);
             game = new Phaser.Game(configurations);
